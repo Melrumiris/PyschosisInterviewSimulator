@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!319 &31900000
+AvatarMask:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: MaskPinky
+  m_Mask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+  m_Elements:
+  - m_Path: 
+    m_Weight: 0
+  - m_Path: Circle.002
+    m_Weight: 0
+  - m_Path: HandRig
+    m_Weight: 0
+  - m_Path: HandRig/Wrist
+    m_Weight: 0
+  - m_Path: HandRig/Wrist/IndexPalm
+    m_Weight: 0
+  - m_Path: HandRig/Wrist/IndexPalm/IndexProximal
+    m_Weight: 0
+  - m_Path: HandRig/Wrist/IndexPalm/IndexProximal/IndexMiddle
+    m_Weight: 0
+  - m_Path: HandRig/Wrist/IndexPalm/IndexProximal/IndexMiddle/IndexDistal
+    m_Weight: 0
+  - m_Path: HandRig/Wrist/MiddlePalm
+    m_Weight: 0
+  - m_Path: HandRig/Wrist/MiddlePalm/MiddleProximal
+    m_Weight: 0
+  - m_Path: HandRig/Wrist/MiddlePalm/MiddleProximal/MiddleMiddle
+    m_Weight: 0
+  - m_Path: HandRig/Wrist/MiddlePalm/MiddleProximal/MiddleMiddle/MiddleDistal
+    m_Weight: 0
+  - m_Path: HandRig/Wrist/PinkyPalm
+    m_Weight: 1
+  - m_Path: HandRig/Wrist/PinkyPalm/PinkyProximal
+    m_Weight: 1
+  - m_Path: HandRig/Wrist/PinkyPalm/PinkyProximal/PinkyMiddle
+    m_Weight: 1
+  - m_Path: HandRig/Wrist/PinkyPalm/PinkyProximal/PinkyMiddle/PinkyDistal
+    m_Weight: 1
+  - m_Path: HandRig/Wrist/RingPalm
+    m_Weight: 0
+  - m_Path: HandRig/Wrist/RingPalm/RingProximal
+    m_Weight: 0
+  - m_Path: HandRig/Wrist/RingPalm/RingProximal/RingMiddle
+    m_Weight: 0
+  - m_Path: HandRig/Wrist/RingPalm/RingProximal/RingMiddle/RingDistal
+    m_Weight: 0
+  - m_Path: HandRig/Wrist/ThumbPalm
+    m_Weight: 0
+  - m_Path: HandRig/Wrist/ThumbPalm/ThumbProximal
+    m_Weight: 0
+  - m_Path: HandRig/Wrist/ThumbPalm/ThumbProximal/ThumbDistal
+    m_Weight: 0
