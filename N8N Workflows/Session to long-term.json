@@ -1,0 +1,339 @@
+{
+  "name": "Session to long-term",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "DELETE",
+        "path": "f21c5e15-3118-4f19-a58c-bdff9802e419",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -432,
+        -32
+      ],
+      "id": "a9d94348-cfa0-44f6-98bf-7a66469ac7c5",
+      "name": "Session End",
+      "webhookId": "f21c5e15-3118-4f19-a58c-bdff9802e419"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- n8n Postgres node (Execute Query). Options > Query Parameters (comma separated):\n--$1 = player id  -> {{ $json.body.player_id }}\n--$2 = patient id -> {{ $json.body.patient_id }}\n-- Session key used in n8n_chat_histories = patient_id || '_' || player_id  (e.g. matthew_ross_player42)\nWITH msgs AS (\n  SELECT\n    id,\n    message->>'type'    AS type,\n    message->>'content' AS content\n  FROM n8n_chat_histories\n  WHERE session_id = ($2::text || '_' || $1::text)\n    AND message->>'type' IN ('human', 'ai')\n    AND COALESCE(message->>'content', '') <> ''\n),\nparsed AS (\n  SELECT\n    id, type, content,\n    CASE WHEN type = 'ai' AND left(content, 1) = '{' THEN content::jsonb END AS j\n  FROM msgs\n)\nSELECT\n  ($2::text || '_' || $1::text) AS session_id,\n  $1::text AS player_id,\n  $2::text AS patient_id,\n  string_agg(\n    CASE\n      WHEN type = 'human' THEN 'Therapist: ' || content\n      ELSE 'Patient: ' || COALESCE(j->>'spoken_response', content)\n    END,\n    E'\\n' ORDER BY id\n  ) AS full_transcript,\n  (SELECT j->'clinical_state'->>'current_trust_level'\n     FROM parsed WHERE j IS NOT NULL ORDER BY id DESC LIMIT 1) AS ending_trust_level,\n  (SELECT j->'clinical_state'->'disclosed_topics'\n     FROM parsed WHERE j IS NOT NULL ORDER BY id DESC LIMIT 1) AS disclosed_topics,\n  count(*) FILTER (WHERE type = 'human') AS therapist_turns\nFROM parsed;",
+        "options": {
+          "queryReplacement": "={{ $json.body.player_id }},{{ $json.body.patient_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -208,
+        -32
+      ],
+      "id": "7b2e07a6-6b35-442e-a2ec-b9528d57d4fa",
+      "name": "Select Session convo",
+      "credentials": {
+        "postgres": {
+          "id": "8kaXDuFz8DqrP4Zl",
+          "name": "IRM Project"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Punem Chat history in long-term history",
+        "height": 432,
+        "width": 1472,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -480,
+        -80
+      ],
+      "typeVersion": 1,
+      "id": "99287d59-67ef-4d1e-a52c-4c2742869632",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "patients_knowledge",
+          "mode": "list",
+          "cachedResultName": "patients_knowledge"
+        },
+        "embeddingBatchSize": 150,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        320,
+        -32
+      ],
+      "id": "0468aacf-87db-441b-9a42-53b355df7edc",
+      "name": "Supabase Vector Store1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "635n5vTiQ0uSjT2z",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.output }}",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "timestamp",
+                "value": "={{ $now.toISO() }}"
+              },
+              {
+                "name": "type",
+                "value": "past_interview"
+              },
+              {
+                "name": "patient_id",
+                "value": "={{ $('Select Session convo').item.json.patient_id }}"
+              },
+              {
+                "name": "player_id",
+                "value": "={{ $('Select Session convo').item.json.player_id }}"
+              },
+              {
+                "name": "ending_trust_level",
+                "value": "={{ $('Select Session convo').item.json.ending_trust_level }}"
+              },
+              {
+                "name": "topics_disclosed",
+                "value": "={{ ($('Select Session convo').item.json.disclosed_topics || []).join(', ') }}"
+              },
+              {
+                "name": "session_id",
+                "value": "={{ $('Select Session convo').item.json.patient_id }}_{{ $('Select Session convo').item.json.player_id }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        464,
+        176
+      ],
+      "id": "7170c332-76b4-410f-862e-b252f083c8f8",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- n8n Postgres node \"Sterge din chat memo\" (Execute Query). Options > Query Parameters:\n--$1 = player id  -> {{ $('Session End').item.json.body.player_id }}\n--$2 = patient id -> {{ $('Session End').item.json.body.patient_id }}\nDELETE FROM n8n_chat_histories\nWHERE session_id = ($2::text || '_' || $1::text);",
+        "options": {
+          "queryReplacement": "={{ $('Session End').item.json.body.player_id }}, {{ $('Session End').item.json.body.patient_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        592,
+        -32
+      ],
+      "id": "dc29b1e5-691b-45b8-9153-4a0ebdd8ddf6",
+      "name": "Sterge din chat memo",
+      "credentials": {
+        "postgres": {
+          "id": "8kaXDuFz8DqrP4Zl",
+          "name": "IRM Project"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Patient: {{ $json.patient_id }}\nEnding trust level: {{ $json.ending_trust_level }}\nTopics disclosed: {{ $json.disclosed_topics }}\n\n=== TRANSCRIPT START ===\n{{ $json.full_transcript }}\n=== TRANSCRIPT END ===",
+        "options": {
+          "systemMessage": "You are the episodic memory module of a virtual patient in a therapy-training simulator. You write the memory the patient will carry into their next session with the same therapist.\n\nYou receive: the patient's name, the patient's ending trust level and the list of topics they disclosed (both already decided: copy them, never re-judge them), and the full session transcript.\n\nWrite ONE dense paragraph in the FIRST PERSON, as the patient (\"I\"), in the language of the transcript, under 150 words, covering:\n1. What I told the therapist: the concrete facts, beliefs, symptoms and life events I actually said, in my own framing and words. Do not add clinical labels or diagnoses that I did not say myself.\n2. What I held back, avoided or refused to talk about.\n3. How the therapist treated me (patient, kind, pushy, dismissive, rushed, skeptical) and how I feel about them.\n4. Unfinished threads: promises the therapist made, questions or topics left for next time, and anything that upset me.\n\nRules:\n- Use only what is in the transcript. Never invent facts, names, dates, symptoms or events.\n- Call the other person \"the therapist\". The setting is a therapy office; never mention a hospital or emergency room.\n- Ignore greetings and small talk.\n- Output format: start with exactly [Previous Session Memory], then a space, then the paragraph, then a space, then exactly [RESULTING TRUST LEVEL: <value>], where <value> is the ending trust level you were given, unchanged.\n- Output only this text: no title, no markdown, no quotation marks around it."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        48,
+        -32
+      ],
+      "id": "135a9758-796e-4ba4-85e0-97556ac837f8",
+      "name": "Cleaner"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        288,
+        176
+      ],
+      "id": "d02cc49b-bb40-400c-8b64-80b83056db3b",
+      "name": "Embeddings OpenAI2",
+      "credentials": {
+        "openAiApi": {
+          "id": "8GMc0gi6n8sWwQtX",
+          "name": "Payed"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -32,
+        176
+      ],
+      "id": "18f0d682-cfc6-479a-84ec-d145b8bc5d83",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "8GMc0gi6n8sWwQtX",
+          "name": "Payed"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Session saved",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        816,
+        -32
+      ],
+      "id": "c01a2612-d813-49df-9cde-a9e6b09870ae",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Session End": {
+      "main": [
+        [
+          {
+            "node": "Select Session convo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Session convo": {
+      "main": [
+        [
+          {
+            "node": "Cleaner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store1": {
+      "main": [
+        [
+          {
+            "node": "Sterge din chat memo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Supabase Vector Store1",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cleaner": {
+      "main": [
+        [
+          {
+            "node": "Supabase Vector Store1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI2": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Cleaner",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sterge din chat memo": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "6c1d416e-7e3a-4c34-afb6-117e4fdc5d30",
+  "meta": {
+    "instanceId": "25591ef1b898311e9f9e2eba5b856b00cd94562b15fb8baee3de5aa918fd268a"
+  },
+  "nodeGroups": [],
+  "id": "WPmb3GUy5aVjficr",
+  "tags": []
+}

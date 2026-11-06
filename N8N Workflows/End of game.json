@@ -1,0 +1,154 @@
+{
+  "name": "End of game",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## End Game\n",
+        "height": 224,
+        "width": 912,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -224,
+        -64
+      ],
+      "typeVersion": 1,
+      "id": "17e05c6c-5dda-46fd-b787-8d93a4ed83e9",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "httpMethod": "DELETE",
+        "path": "a18e833e-bb2a-4d9f-bfc9-5dbd9be633c0",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -176,
+        -16
+      ],
+      "id": "938fae08-3571-4315-8ebc-b113943fcc78",
+      "name": "End of game",
+      "webhookId": "a18e833e-bb2a-4d9f-bfc9-5dbd9be633c0"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM n8n_chat_histories\nWHERE session_id = ($2::text || '_' || $1::text);",
+        "options": {
+          "queryReplacement": "={{ $('End of game').item.json.body.player_id }}, {{ $('End of game').item.json.body.patient_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        32,
+        -16
+      ],
+      "id": "cbba70f6-c738-4d8e-9909-6149c5c44391",
+      "name": "Sterge din chat memo1",
+      "credentials": {
+        "postgres": {
+          "id": "8kaXDuFz8DqrP4Zl",
+          "name": "IRM Project"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "patients_knowledge",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "=metadata->>session_id",
+              "condition": "eq",
+              "keyValue": "={{ $('End of game').item.json.body.patient_id }}_{{ $('End of game').item.json.body.player_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        256,
+        -16
+      ],
+      "id": "cc38449c-6712-42f5-9402-98d404017387",
+      "name": "Delete a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "635n5vTiQ0uSjT2z",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Game ended",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        480,
+        -16
+      ],
+      "id": "be6f28d6-9812-44d2-9c3c-3fada2d7afd9",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "End of game": {
+      "main": [
+        [
+          {
+            "node": "Sterge din chat memo1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sterge din chat memo1": {
+      "main": [
+        [
+          {
+            "node": "Delete a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete a row": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "279db489-169b-4500-8c5d-5a025e8b6e4f",
+  "meta": {
+    "instanceId": "25591ef1b898311e9f9e2eba5b856b00cd94562b15fb8baee3de5aa918fd268a"
+  },
+  "nodeGroups": [],
+  "id": "N23QPVDQwSs6siEn",
+  "tags": []
+}
