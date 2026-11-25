@@ -66,6 +66,30 @@ public class PatientSessionController : MonoBehaviour
     public void SaveSessionToMemory() { if (state == State.Idle) StartCoroutine(EndFlow(false)); }
     public void ResetEverything() { if (state == State.Idle) StartCoroutine(EndFlow(true)); }
 
+    /// End of game (sterge chat + memorie) si apoi inchide aplicatia. Daca cererea esueaza, ramane deschis.
+    public void EndGameAndQuit() { if (state == State.Idle) StartCoroutine(EndGameThenQuit()); }
+
+    IEnumerator EndGameThenQuit()
+    {
+        state = State.Ending;
+        string res = null, err = null;
+        Log("End of game...");
+        yield return api.EndGame(r => res = r, e => err = e);
+        if (err != null)
+        {
+            Log("EROARE End of game, nu inchid aplicatia: " + err);
+            state = State.Idle;
+            yield break;
+        }
+        Log("End of game OK. Inchid aplicatia.");
+        yield return new WaitForSecondsRealtime(1f);
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
+    }
+
     // ---- fluxuri ----
     IEnumerator Turn(byte[] wav)
     {
@@ -160,7 +184,16 @@ public class PatientSessionController : MonoBehaviour
     }
 
     // ---- UI debug ----
-    void Log(string s) { log.AppendLine(s); Debug.Log(s); scroll.y = float.MaxValue; }
+    readonly System.Collections.Generic.List<string> lines = new System.Collections.Generic.List<string>();
+    public string StateName => state.ToString();
+    public bool IsIdle => state == State.Idle;
+    public string RecentLog(int n)
+    {
+        int start = Mathf.Max(0, lines.Count - n);
+        return string.Join("\n", lines.GetRange(start, lines.Count - start));
+    }
+
+    void Log(string s) { log.AppendLine(s); lines.Add(s); Debug.Log(s); scroll.y = float.MaxValue; }
 
     void OnGUI()
     {
